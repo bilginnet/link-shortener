@@ -1,0 +1,58 @@
+version: "3.8"
+
+services:
+    app:
+        build:
+            args:
+                user: ercan
+                uid: 1000
+            context: ./
+            dockerfile: Dockerfile
+        image: link_shortener
+        container_name: link_shortener_app
+        restart: unless-stopped
+        working_dir: /var/www/
+        volumes:
+            - ./:/var/www
+        networks:
+            - link_shortener
+
+    db:
+        image: mysql:8.0.30
+        container_name: link_shortener_db
+        restart: unless-stopped
+        command: --default-authentication-plugin=mysql_native_password
+        ports:
+            -   "3307:3306"
+        environment:
+            MYSQL_ROOT_PASSWORD: 1234
+            MYSQL_DATABASE: link_shortener
+        volumes:
+            - ./docker/mysql:/docker-entrypoint-initdb.d
+        networks:
+            - link_shortener
+    nginx:
+        image: nginx:alpine
+        container_name: link_shortener_nginx
+        restart: unless-stopped
+        ports:
+            - "8000:80"
+        volumes:
+            - ./:/var/www
+            - ./docker/nginx:/etc/nginx/conf.d
+        networks:
+            - link_shortener
+    redis:
+        container_name: link_shortener_redis
+        image: redis:latest
+        restart: unless-stopped
+        ports:
+            - "6379:6379"
+        volumes:
+            - ./docker/redis/redis.conf:/etc/redis.conf:Z
+            - ./docker/redis/tmp:/tmp:Z
+        networks:
+            - link_shortener
+networks:
+    link_shortener:
+        driver: bridge
